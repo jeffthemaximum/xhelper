@@ -9,12 +9,17 @@ class Helpers:
         row_lowered = [cell.lower() for cell in worksheets_list]
         return row_lowered.index('email') if 'email' in row_lowered else None
 
+    @classmethod
+    def get_all_column_vals_as_row(cls, sheet, col_num):
+        # get just elements at col_num index position
+        return [el[col_num] for el in sheet.all_vals]
+
 
 class Xhelper:
     def __init__(self, json_file_name, spread_sheet_name):
         self.json_file_name = json_file_name
         self.spread_sheet_name = spread_sheet_name
-        self.errrors = []
+        self.errors = []
         self.gc = self.authorize()
         self.spread_sheet = self.open_spread_sheet()
         self.worksheets_list = self.get_all_worksheet_names()
@@ -31,26 +36,37 @@ class Xhelper:
         return gspread.authorize(credentials)
 
 
-class Wiley:
+class Sheet:
     def __init__(self, xhelper, sheet):
         self.xhelper = xhelper
         self.sheet = sheet
+        self.all_vals = sheet.get_all_values()
+
+
+class Wiley:
+    def __init__(self, xhelper, sheet):
+        self.xhelper = xhelper
+        self.sheet = Sheet(self.xhelper, sheet)
+        self.email_col_num = self.get_email_column_number()
+
+    def get_email_column_number(self):
+        # get first row
+        first_row_as_list = self.sheet.all_vals[0]
+        # get column # of email
+        return Helpers.find_email(first_row_as_list)
 
     def wiley(self):
-        print(self.sheet.title)
-        # get all_vals
-        all_vals = self.sheet.get_all_values()
-        # get first row
-        first_row_as_list = all_vals[0]
-        # get column # of email
-        email_col_num = Helpers.find_email(first_row_as_list)
         # return and print error if 
-        if email_col_num == None:
+        if self.email_col_num == None:
             error = "ERROR WITH WILEY. MAKE SURE THERE'S A COLUMN NAMED 'email'"
             print(error)
             self.xhelper.errors.append(error)
+            return None
+        # else get list of all emails
         else:
-            return 10
+            all_emails = Helpers.get_all_column_vals_as_row(self.sheet, self.email_col_num)
+            print all_emails
+            
 
     def run(self):
         return self.wiley()
