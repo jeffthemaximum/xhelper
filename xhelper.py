@@ -87,6 +87,9 @@ class Wiley:
         self.all_emails = Helpers.get_all_column_vals_as_row(self.sheet, self.email_col_num)
         self.all_urls = Helpers.get_all_column_vals_as_row(self.sheet, self.url_col_num)
         self.all_authors = Helpers.get_all_column_vals_as_row(self.sheet, self.author_col_num)
+        self.all_soups = []
+        self.found_first_names = [None] * len(self.all_emails)
+        self.found_emails = [None] * len(self.all_emails)
         print "done wiley init"
 
     def clean_author_email(self, author):
@@ -94,7 +97,9 @@ class Wiley:
         return ["".join([char for char in el if char.isalpha()]) for el in author if len(el) > 0]
 
     def get_first_name_by_url(self, url):
+        print url
         scraped = Scraper(url)
+        self.all_soups.append(scraped)
         try:
             authors_as_list = scraped.soup.find("ol", {"id": "authors"}).find_all('li')
         except TypeError:
@@ -119,8 +124,53 @@ class Wiley:
         self.xhelper.errors.append(error)
         return ''
 
+    def get_first_name_if_initial(self, name, idx=0):
+        # catch case like ['T', 'Whitten']
+        try:
+            name[0]
+        except:
+            return ''
+        if len(name[0]) is 1:
+            soup = self.all_soups[idx]
+            correspondence = soup.soup.find("p", {"id": "correspondence"})
+            # try finding email
+            if correspondence.find('a') is not None:
+                email = correspondence.find('a').text.encode('ascii', 'ignore')
+                username = email.split('@')[0]
+                if '.' in username:
+                    first_name = username.split('.')[0]
+                    if len(first_name) > 1:
+                        return first_name
+                # handle case like ['E', 'J', 'Cartwright'] and email='ecartw2@emory.edu'
+                else:
+                    last_name = name[-1]
+                    correspondence_text = correspondence.text.encode('ascii', 'ignore')
+                    correspondence_text_list = ["".join([char for char in el if char.isalpha()]) for el in correspondence_text.split(' ')]
+                    if last_name in correspondence_text_list or last_name.title() in correspondence_text_list:
+                        last_name_idx = correspondence_text_list.index(last_name)
+                        first_name = correspondence_text_list[last_name_idx - 1]
+                        return first_name
+                    else:
+                        # handle case like ['J', 'Sean', 'Doody'] and email='jseandoody@gmail.com'
+                        # and correspondence_text='*Corresponding author. E-mail: jseandoody@gmail.com'
+                        if len(name) is 3:
+                            middle_name = name[1]
+                            if len(middle_name) > 1:
+                                return middle_name
+        if len(name[0]) > 1:
+            return name[0]
+        else:
+            print name[0]
+
+
     def get_first_names(self):
-        return [self.clean_author_email(self.get_first_name_by_url(url)) for url in self.all_urls]        
+
+        names = [self.get_first_name_by_url(url) for url in self.all_urls]
+
+        cleaned_names = [self.clean_author_email(name) for name in names]
+
+        first_names = [self.get_first_name_if_initial(idx=i, name=name) for i, name in enumerate(cleaned_names)]
+        return first_names
 
     def wiley(self):
         # return and print error if 
