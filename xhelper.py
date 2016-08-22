@@ -1,13 +1,30 @@
 import gspread
+import requests
+import bs4
 import pudb
 from oauth2client.service_account import ServiceAccountCredentials
+
+class Scraper:
+    def __init__(self, url):
+        self.url = url
+        self.soup = self.cook_soup(self.url)
+
+    def cook_soup(self, link):
+        """
+        takes a link as a string
+        returns a bs soup object
+        """
+        response = requests.get(self.url)
+        return bs4.BeautifulSoup(response.text)
 
 class Helpers:
 
     @classmethod
     def get_all_column_vals_as_row(cls, sheet, col_num):
         # get just elements at col_num index position
-        return [el[col_num] for el in sheet.all_vals]
+        col_as_list = [el[col_num] for el in sheet.all_vals]
+        col_as_list.pop(0)
+        return col_as_list
 
     @classmethod
     def get_column_number(cls, sheet, column_keyword):
@@ -31,6 +48,7 @@ class Xhelper:
         self.gc = self.authorize()
         self.spread_sheet = self.open_spread_sheet()
         self.worksheets_list = self.get_all_worksheet_names()
+        print "done xhelper init"
 
     def get_all_worksheet_names(self):
         return self.spread_sheet.worksheets()
@@ -56,11 +74,30 @@ class Wiley:
         self.xhelper = xhelper
         self.sheet = Sheet(self.xhelper, sheet)
         self.email_col_num = Helpers.get_column_number(self.sheet, 'email')
+        print('77')
         self.url_col_num = Helpers.get_column_number(self.sheet, 'pageUrl')
         self.author_col_num = Helpers.get_column_number(self.sheet, 'author')
+        print('80')
         self.all_emails = Helpers.get_all_column_vals_as_row(self.sheet, self.email_col_num)
+        print('82')
         self.all_urls = Helpers.get_all_column_vals_as_row(self.sheet, self.url_col_num)
         self.all_authors = Helpers.get_all_column_vals_as_row(self.sheet, self.author_col_num)
+        print('85')
+        print "done wiley init"
+
+    def get_first_names(self):
+        for url in self.all_urls:
+            pu.db
+            scraped = Scraper(url)
+            authors_as_list = scraped.soup.find("ol", {"id": "authors"}).find_all('li')
+            authors_as_text_list = [el.text for el in authors_as_list]
+            for author in authors_as_text_list:
+                if '*' in author:
+                    return author
+            error = "ERROR WITH WILEY. COULDN'T FIND FIRST NAME FOR " + url
+            print(error)
+            self.xhelper.errors.append(error)
+            return ''
 
     def wiley(self):
         # return and print error if 
@@ -71,7 +108,9 @@ class Wiley:
             return None
         # else get list of all emails
         else:
-            pu.db
+            # TODO get first name
+            first_name = self.get_first_name()
+            # TODO get email
             print self.all_emails
 
     def run(self):
