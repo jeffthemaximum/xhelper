@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 import gspread
 import requests
 import bs4
 import pudb
+import cgi
 from oauth2client.service_account import ServiceAccountCredentials
 
 class Scraper:
@@ -14,8 +16,12 @@ class Scraper:
         takes a link as a string
         returns a bs soup object
         """
-        response = requests.get(self.url)
-        return bs4.BeautifulSoup(response.text)
+        try:
+            response = requests.get(self.url)
+            return bs4.BeautifulSoup(response.text)
+        except requests.exceptions.MissingSchema:
+            return ''
+
 
 class Helpers:
 
@@ -72,32 +78,49 @@ class Sheet:
 class Wiley:
     def __init__(self, xhelper, sheet):
         self.xhelper = xhelper
+        print 'getting sheet'
         self.sheet = Sheet(self.xhelper, sheet)
+        print 'got sheet'
         self.email_col_num = Helpers.get_column_number(self.sheet, 'email')
-        print('77')
         self.url_col_num = Helpers.get_column_number(self.sheet, 'pageUrl')
         self.author_col_num = Helpers.get_column_number(self.sheet, 'author')
-        print('80')
         self.all_emails = Helpers.get_all_column_vals_as_row(self.sheet, self.email_col_num)
-        print('82')
         self.all_urls = Helpers.get_all_column_vals_as_row(self.sheet, self.url_col_num)
         self.all_authors = Helpers.get_all_column_vals_as_row(self.sheet, self.author_col_num)
-        print('85')
         print "done wiley init"
 
-    def get_first_names(self):
-        for url in self.all_urls:
-            pu.db
-            scraped = Scraper(url)
+    def clean_author_email(self, author):
+        author = author.encode('ascii', 'replace').split(' ')
+        return ["".join([char for char in el if char.isalpha()]) for el in author if len(el) > 0]
+
+    def get_first_name_by_url(self, url):
+        scraped = Scraper(url)
+        try:
             authors_as_list = scraped.soup.find("ol", {"id": "authors"}).find_all('li')
-            authors_as_text_list = [el.text for el in authors_as_list]
-            for author in authors_as_text_list:
-                if '*' in author:
-                    return author
-            error = "ERROR WITH WILEY. COULDN'T FIND FIRST NAME FOR " + url
-            print(error)
-            self.xhelper.errors.append(error)
+        except TypeError:
             return ''
+        authors_as_text_list = [el.text for el in authors_as_list]
+        for author in authors_as_text_list:
+            if '*' in author:
+                return author
+        for author in authors_as_text_list:
+            # if † in author name
+            if author is not None:
+                try:
+                    if "\xe2\x80\xa0".decode('utf-8') in cgi.escape(author):
+                        return author
+                except:
+                    pu.db
+        # try corresponding author
+        if authors_as_list[0] is not None:
+            return authors_as_text_list[0]
+        error = "ERROR WITH WILEY. COULDN'T FIND FIRST NAME FOR " + url
+        print(error)
+        self.xhelper.errors.append(error)
+        return ''
+
+    def get_first_names(self):
+        return [self.clean_author_email(self.get_first_name_by_url(url)) for url in self.all_urls]        
 
     def wiley(self):
         # return and print error if 
@@ -109,9 +132,9 @@ class Wiley:
         # else get list of all emails
         else:
             # TODO get first name
-            first_name = self.get_first_name()
+            first_names = self.get_first_names()
             # TODO get email
-            print self.all_emails
+            print first_names
 
     def run(self):
         return self.wiley()
