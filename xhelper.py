@@ -100,12 +100,17 @@ class Helpers:
             return True
 
     @classmethod
-    def get_cell_list(cls, sheet, list_of_strs):
-        last_col_num = Helpers.get_last_col_with_text(self.sheet.sheet)
+    def get_last_col_letter(cls, sheet):
+        last_col_num = Helpers.get_last_col_with_text(sheet)
         last_col_letter = Helpers.get_col_letter_from_number(last_col_num)
-        num_rows = len(first_names)
+        return last_col_letter
+
+    @classmethod
+    def get_cell_list(cls, sheet, list_of_strs):
+        last_col_letter = Helpers.get_last_col_letter(sheet)
+        num_rows = len(list_of_strs)
         range_string = Helpers.build_range_string(last_col_letter, num_rows)
-        cell_list = self.sheet.sheet.range(range_string)
+        cell_list = sheet.range(range_string)
         return cell_list
 
 class Xhelper:
@@ -205,6 +210,10 @@ class Wiley:
             # handle case like ['E', 'J', 'Cartwright'] and email='ecartw2@emory.edu'
             else:
                 last_name = name[-1] if Helpers.and_jr_check(name[-1]) else name[-2]
+                soup = self.all_soups[idx]
+                correspondence = soup.soup.find("p", {"id": "correspondence"})
+                if correspondence is None:
+                    correspondence = soup.soup.find("p", {"id": "contactDetails"})
                 correspondence_text = correspondence.text.encode('ascii', 'ignore')
                 correspondence_text_list = ["".join([char for char in el if char.isalpha()]) for el in correspondence_text.split(' ')]
                 # if self.all_urls[idx] == 'http://onlinelibrary.wiley.com/wol1/doi/10.1111/oik.01745/abstract':
@@ -243,11 +252,18 @@ class Wiley:
         return first_names
 
     def get_email(self, idx):
+        email = ''
         soup = self.all_soups[idx]
-        correspondence = soup.soup.find("p", {"id": "correspondence"})
+        try:
+            correspondence = soup.soup.find("p", {"id": "correspondence"})
+        except:
+            return ''
         if correspondence is None:
-            correspondence = soup.soup.find("p", {"id": "contactDetails"})
-            email = correspondence.find("span", {"class": "email"}).text.split('(')[1].split(')')[0]
+            try:
+                correspondence = soup.soup.find("p", {"id": "contactDetails"})
+                email = correspondence.find("span", {"class": "email"}).text.split('(')[1].split(')')[0]
+            except:
+                email = soup.soup.find("a", {"title": "Link to email address"}).text
         if email != '' or correspondence.find('a') is not None:
             email = correspondence.find('a').text.encode('ascii', 'ignore') if email == '' else email
         return email
@@ -255,6 +271,7 @@ class Wiley:
 
     def get_emails(self):
         emails = [self.get_email(idx=i) for i, url in enumerate(self.all_soups)]
+        return emails
 
     def wiley(self):
         # return and print error if 
@@ -265,19 +282,26 @@ class Wiley:
             return None
         # else get list of all emails
         else:
+
             # TODO get first name
             first_names = self.get_first_names()
             cell_list = Helpers.get_cell_list(self.sheet.sheet, first_names)
+            col_letter = Helpers.get_last_col_letter(self.sheet.sheet)
+            self.sheet.sheet.update_acell(col_letter + '1', 'names')
             for i, cell in enumerate(first_names):
                 cell_list[i].value = first_names[i].title()
             self.sheet.sheet.update_cells(cell_list)
             print first_names
+
             # TODO get email
             emails = self.get_emails()
             cell_list = Helpers.get_cell_list(self.sheet.sheet, emails)
+            col_letter = Helpers.get_last_col_letter(self.sheet.sheet)
+            self.sheet.sheet.update_acell(col_letter + '1', 'email')
+            for i, cell in enumerate(emails):
+                cell_list[i].value = emails[i]
             self.sheet.sheet.update_cells(cell_list)
             print emails
-
 
     def run(self):
         return self.wiley()
