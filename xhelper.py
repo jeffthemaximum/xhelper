@@ -303,6 +303,57 @@ class Wiley:
             self.sheet.sheet.update_cells(cell_list)
             print emails
 
+            # check if email is international
+            # iterate through list of emails
+            # make column to right of last column
+            au_col_letter = Helpers.get_last_col_letter(self.sheet.sheet)
+            # make header "au emails"
+            self.sheet.sheet.update_acell(au_col_letter + '1', 'AU emails')
+
+            ca_col_letter = Helpers.get_last_col_letter(self.sheet.sheet)
+            self.sheet.sheet.update_acell(ca_col_letter + '1', 'CA emails')
+
+            gov_col_letter = Helpers.get_last_col_letter(self.sheet.sheet)
+            self.sheet.sheet.update_acell(gov_col_letter + '1', 'GOV emails')
+
+            other_col_letter = Helpers.get_last_col_letter(self.sheet.sheet)
+            self.sheet.sheet.update_acell(other_col_letter + '1', 'OTHER emails')
+
+            au_count = 0
+            ca_count = 0
+            gov_count = 0
+            other_count = 0
+            accepted_domains = ['com', 'net', 'us', 'edu', 'org']
+
+            for idx, email in enumerate(emails):
+                # get end of emails
+                after_dot = email.split('.')[-1]
+                # if ends in .au
+                if after_dot == 'au':
+                    au_count += 1
+                    # put emails in appropriate rows
+                    self.sheet.sheet.update_acell(au_col_letter + str(idx + 2), email)
+
+                # if ends in .ca
+                if after_dot == 'ca':
+                    ca_count += 1
+                    self.sheet.sheet.update_acell(ca_col_letter + str(idx + 2), email)
+                # if ends in .gov
+                if after_dot == 'gov':
+                    # make grey
+                    gov_count += 1
+                    self.sheet.sheet.update_acell(gov_col_letter + str(idx + 2), email)
+                # if unrecognized
+                if after_dot not in accepted_domains and email != '':
+                    other_count += 1
+                    self.sheet.sheet.update_acell(other_col_letter + str(idx + 2), email)
+
+            # make header "au emails"
+            self.sheet.sheet.update_acell(au_col_letter + '1', str(au_count) + " " + 'AU emails')
+            self.sheet.sheet.update_acell(ca_col_letter + '1', str(ca_count) + " " + 'CA emails')
+            self.sheet.sheet.update_acell(gov_col_letter + '1', str(gov_count) + " " + 'GOV emails')
+            self.sheet.sheet.update_acell(other_col_letter + '1', str(other_count) + " " + 'OTHER emails')
+
     def run(self):
         return self.wiley()
 
