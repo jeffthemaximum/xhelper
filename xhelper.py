@@ -113,6 +113,21 @@ class Helpers:
         cell_list = sheet.range(range_string)
         return cell_list
 
+    @classmethod
+    def get_all_wiley_urls(cls, sheet, url_col_num):
+        urls = Helpers.get_all_column_vals_as_row(sheet, url_col_num)
+        urls = [Helpers.convert_url(url) for url in urls]
+        return urls
+
+    @classmethod
+    def convert_url(cls, url):
+        if '/wol1/' not in url:
+            foo = url.split('.com')
+            bar = foo[0] + '.com/wol1' + foo[1]
+            return bar
+        else:
+            return url
+
 class Xhelper:
     def __init__(self, json_file_name, spread_sheet_name):
         self.json_file_name = json_file_name
@@ -148,15 +163,17 @@ class Wiley:
         print 'getting sheet'
         self.sheet = Sheet(self.xhelper, sheet)
         print 'got sheet'
-        self.email_col_num = Helpers.get_column_number(self.sheet, 'email')
+        # self.email_col_num = Helpers.get_column_number(self.sheet, 'email')
         self.url_col_num = Helpers.get_column_number(self.sheet, 'pageUrl')
-        self.author_col_num = Helpers.get_column_number(self.sheet, 'author')
-        self.all_emails = Helpers.get_all_column_vals_as_row(self.sheet, self.email_col_num)
-        self.all_urls = Helpers.get_all_column_vals_as_row(self.sheet, self.url_col_num)
-        self.all_authors = Helpers.get_all_column_vals_as_row(self.sheet, self.author_col_num)
+        # self.author_col_num = Helpers.get_column_number(self.sheet, 'author')
+        # self.all_emails = Helpers.get_all_column_vals_as_row(self.sheet, self.email_col_num)
+        self.all_urls = Helpers.get_all_wiley_urls(self.sheet, self.url_col_num)
+        # self.all_urls = self.get_all_urls()
+        # self.all_urls = Helpers.get_all_column_vals_as_row(self.sheet, self.url_col_num)
+        # self.all_authors = Helpers.get_all_column_vals_as_row(self.sheet, self.author_col_num)
         self.all_soups = []
-        self.found_first_names = [None] * len(self.all_emails)
-        self.found_emails = [None] * len(self.all_emails)
+        # self.found_first_names = [None] * len(self.all_emails)
+        # self.found_emails = [None] * len(self.all_emails)
         print "done wiley init"
 
     def clean_author_email(self, author):
@@ -169,7 +186,7 @@ class Wiley:
         self.all_soups.append(scraped)
         try:
             authors_as_list = scraped.soup.find("ol", {"id": "authors"}).find_all('li')
-        except TypeError:
+        except:
             return ''
         authors_as_text_list = [el.text for el in authors_as_list]
         for author in authors_as_text_list:
@@ -219,7 +236,10 @@ class Wiley:
                 # if self.all_urls[idx] == 'http://onlinelibrary.wiley.com/wol1/doi/10.1111/oik.01745/abstract':
                 #     pu.db
                 if last_name in correspondence_text_list or last_name.title() in correspondence_text_list:
-                    last_name_idx = correspondence_text_list.index(last_name)
+                    try:
+                        last_name_idx = correspondence_text_list.index(last_name)
+                    except ValueError:
+                        last_name_idx = correspondence_text_list.index(last_name.title())
                     correspondence_idx = correspondence_text_list.index('Correspondence') if 'Correspondence' in correspondence_text_list else None
                     if correspondence_idx:
                         name_after_correspondence = correspondence_text_list[correspondence_idx + 1]
@@ -275,8 +295,8 @@ class Wiley:
 
     def wiley(self):
         # return and print error if 
-        if self.email_col_num == None:
-            error = "ERROR WITH WILEY. MAKE SURE THERE'S A COLUMN NAMED 'email'"
+        if self.url_col_num == None:
+            error = "ERROR WITH WILEY. MAKE SURE THERE'S A COLUMN NAMED 'pageUrl'"
             print(error)
             self.xhelper.errors.append(error)
             return None
@@ -360,7 +380,7 @@ class Wiley:
 
 
 def main():
-    xhelper = Xhelper(json_file_name = 'microryza-jeff-e07a11b3dbc9.json', spread_sheet_name = 'Copy of Herpetology abstracts')
+    xhelper = Xhelper(json_file_name = 'microryza-jeff-e07a11b3dbc9.json', spread_sheet_name = 'spider wiley')
     for sheet in xhelper.worksheets_list:
         if 'wiley' in sheet.title.lower():
             wiley = Wiley(xhelper = xhelper, sheet = sheet)
