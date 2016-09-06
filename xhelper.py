@@ -28,7 +28,6 @@ class Helpers:
     @classmethod
     def get_all_column_vals_as_row(cls, sheet, col_num):
         # get just elements at col_num index position
-        pu.db
         col_as_list = [el[col_num] for el in sheet.all_vals]
         col_as_list.pop(0)
         return col_as_list
