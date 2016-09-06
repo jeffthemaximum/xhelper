@@ -28,6 +28,7 @@ class Helpers:
     @classmethod
     def get_all_column_vals_as_row(cls, sheet, col_num):
         # get just elements at col_num index position
+        pu.db
         col_as_list = [el[col_num] for el in sheet.all_vals]
         col_as_list.pop(0)
         return col_as_list
@@ -231,7 +232,10 @@ class Wiley:
                 correspondence = soup.soup.find("p", {"id": "correspondence"})
                 if correspondence is None:
                     correspondence = soup.soup.find("p", {"id": "contactDetails"})
-                correspondence_text = correspondence.text.encode('ascii', 'ignore')
+                try:
+                    correspondence_text = correspondence.text.encode('ascii', 'ignore')
+                except:
+                    return ''
                 correspondence_text_list = ["".join([char for char in el if char.isalpha()]) for el in correspondence_text.split(' ')]
                 # if self.all_urls[idx] == 'http://onlinelibrary.wiley.com/wol1/doi/10.1111/oik.01745/abstract':
                 #     pu.db
@@ -283,7 +287,10 @@ class Wiley:
                 correspondence = soup.soup.find("p", {"id": "contactDetails"})
                 email = correspondence.find("span", {"class": "email"}).text.split('(')[1].split(')')[0]
             except:
-                email = soup.soup.find("a", {"title": "Link to email address"}).text
+                try:
+                    email = soup.soup.find("a", {"title": "Link to email address"}).text
+                except:
+                    return ''
         if email != '' or correspondence.find('a') is not None:
             email = correspondence.find('a').text.encode('ascii', 'ignore') if email == '' else email
         return email
