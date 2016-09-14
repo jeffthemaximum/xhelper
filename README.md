@@ -1,5 +1,11 @@
 # Clone the repo
 
+- in terminal
+
+```
+git clone https://github.com/jeffthemaximum/xhelper.git
+```
+
 # Install virtualenv (if you haven't yet)
 
 - from the root of the repository, enter this in your terminal
