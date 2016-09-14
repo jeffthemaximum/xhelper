@@ -1,4 +1,4 @@
-# Clone the repo
+# Clone the repo (if you haven't yet)
 
 - in terminal
 
